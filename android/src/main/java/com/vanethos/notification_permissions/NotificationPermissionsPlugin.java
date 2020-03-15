@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -11,6 +12,9 @@ import androidx.core.app.NotificationManagerCompat;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
+
+import static android.provider.Settings.EXTRA_APP_PACKAGE;
+import static android.provider.Settings.EXTRA_CHANNEL_ID;
 
 public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHandler {
   public static void registerWith(Registrar registrar) {
@@ -35,12 +39,7 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
     } else if ("requestNotificationPermissions".equalsIgnoreCase(call.method)) {
       if (PERMISSION_DENIED.equalsIgnoreCase(getNotificationPermissionStatus())) {
         if (context instanceof Activity) {
-          final Uri uri = Uri.fromParts("package", context.getPackageName(), null);
-
-          final Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-          intent.setData(uri);
-
-          context.startActivity(intent);
+          requestNotificationPermissions();
 
           result.success(null);
         } else {
@@ -58,5 +57,37 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
     return (NotificationManagerCompat.from(context).areNotificationsEnabled())
         ? PERMISSION_GRANTED
         : PERMISSION_DENIED;
+  }
+
+  private void requestNotificationPermissions() {
+    try {
+      if (navigateToNotificationSettings()) return;
+      navigateToAppSettings();
+    } catch (Exception e) {
+      navigateToAppSettings();
+    }
+  }
+
+  private boolean navigateToNotificationSettings() {
+    // 21-25 may also support this
+    Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+    intent.putExtra(EXTRA_APP_PACKAGE, context.getPackageName());
+    intent.putExtra(EXTRA_CHANNEL_ID, context.getApplicationInfo().uid);
+    // 21-25, 5.0-7.1
+    intent.putExtra("app_package", context.getPackageName());
+    intent.putExtra("app_uid", context.getApplicationInfo().uid);
+    if (intent.resolveActivity(context.getPackageManager()) == null) return false;
+
+    context.startActivity(intent);
+    return true;
+  }
+
+  private void navigateToAppSettings() {
+    final Uri uri = Uri.fromParts("package", context.getPackageName(), null);
+
+    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+    intent.setData(uri);
+
+    context.startActivity(intent);
   }
 }
