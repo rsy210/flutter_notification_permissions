@@ -16,6 +16,11 @@ class NotificationPermissions {
     return _getPermissionStatus(status);
   }
 
+  static Future<PermissionStatus> navigateToNotificationSettings() async {
+    String status = await _channel.invokeMethod('navigateToNotificationSettings');
+    return _getPermissionStatus(status);
+  }
+
   static Future<PermissionStatus> getNotificationPermissionStatus() async {
     final String status =
         await _channel.invokeMethod('getNotificationPermissionStatus');

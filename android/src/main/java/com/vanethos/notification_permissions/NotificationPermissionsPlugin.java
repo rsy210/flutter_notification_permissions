@@ -39,14 +39,20 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
     } else if ("requestNotificationPermissions".equalsIgnoreCase(call.method)) {
       if (PERMISSION_DENIED.equalsIgnoreCase(getNotificationPermissionStatus())) {
         if (context instanceof Activity) {
-          requestNotificationPermissions();
-
+          navigateToSettings();
           result.success(null);
         } else {
           result.error(call.method, "context is not instance of Activity", null);
         }
       } else {
         result.success(null);
+      }
+    } else if ("navigateToNotificationSettings".equalsIgnoreCase(call.method)) {
+      if (context instanceof Activity) {
+        navigateToSettings();
+        result.success(null);
+      } else {
+        result.error(call.method, "context is not instance of Activity", null);
       }
     } else {
       result.notImplemented();
@@ -59,7 +65,7 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
         : PERMISSION_DENIED;
   }
 
-  private void requestNotificationPermissions() {
+  private void navigateToSettings() {
     try {
       if (navigateToNotificationSettings()) return;
       navigateToAppSettings();

@@ -82,7 +82,26 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   );
                   // The permission is granted, then just show the text
                   if (snapshot.data == permGranted) {
-                    return textWidget;
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        textWidget,
+                        SizedBox(height: 20),
+                        FlatButton(
+                          color: Colors.amber,
+                          child: Text("Navigate to notification settings".toUpperCase()),
+                          onPressed: () {
+                            // show the dialog/open settings screen
+                            NotificationPermissions.navigateToNotificationSettings().then((_) {
+                              // when finished, check the permission status
+                              setState(() {
+                                permissionStatusFuture = getCheckNotificationPermStatus();
+                              });
+                            });
+                          },
+                        )
+                      ],
+                    );
                   }
 
                   // else, we'll show a button to ask for the permissions
@@ -90,27 +109,32 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
                       textWidget,
-                      SizedBox(
-                        height: 20,
-                      ),
+                      SizedBox(height: 20),
                       FlatButton(
                         color: Colors.amber,
-                        child:
-                            Text("Ask for notification status".toUpperCase()),
+                        child: Text("Ask for notification status".toUpperCase()),
                         onPressed: () {
                           // show the dialog/open settings screen
-                          NotificationPermissions
-                                  .requestNotificationPermissions(
-                                      iosSettings:
-                                          const NotificationSettingsIos(
-                                              sound: true,
-                                              badge: true,
-                                              alert: true))
+                          NotificationPermissions.requestNotificationPermissions(
+                                  iosSettings: const NotificationSettingsIos(sound: true, badge: true, alert: true))
                               .then((_) {
                             // when finished, check the permission status
                             setState(() {
-                              permissionStatusFuture =
-                                  getCheckNotificationPermStatus();
+                              permissionStatusFuture = getCheckNotificationPermStatus();
+                            });
+                          });
+                        },
+                      ),
+                      SizedBox(height: 20),
+                      FlatButton(
+                        color: Colors.amber,
+                        child: Text("Navigate to notification settings".toUpperCase()),
+                        onPressed: () {
+                          // show the dialog/open settings screen
+                          NotificationPermissions.navigateToNotificationSettings().then((_) {
+                            // when finished, check the permission status
+                            setState(() {
+                              permissionStatusFuture = getCheckNotificationPermStatus();
                             });
                           });
                         },
