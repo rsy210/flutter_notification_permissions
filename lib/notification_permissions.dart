@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
@@ -27,6 +28,15 @@ class NotificationPermissions {
     return _getPermissionStatus(status);
   }
 
+  /// Android only. if [channelIds] is null or empty, check all channels status.
+  /// Returns [ChannelStatus.available] if at least one of channels is available.
+  /// Returns [ChannelStatus.none] if channels has not been created.
+  static Future<ChannelStatus> checkChannelsStatus(List<String> channelIds) async {
+    if (Platform.isIOS) return ChannelStatus.available;
+    final String status = await _channel.invokeMethod('checkChannelsStatus', channelIds ?? []);
+    return _getChannelStatus(status);
+  }
+
   /// Gets the PermissionStatus from the channel Method
   ///
   /// Given a [String] status from the method channel, it returns a
@@ -41,9 +51,25 @@ class NotificationPermissions {
         return PermissionStatus.unknown;
     }
   }
+
+  /// Gets the ChannelStatus from the channel Method
+  ///
+  /// Given a [String] status from the method channel, it returns a
+  /// [ChannelStatus]
+  static ChannelStatus _getChannelStatus(String status) {
+    switch (status) {
+      case "none":
+        return ChannelStatus.none;
+      case "unavailable":
+        return ChannelStatus.unavailable;
+      default:
+        return ChannelStatus.available;
+    }
+  }
 }
 
 enum PermissionStatus { granted, unknown, denied }
+enum ChannelStatus { none, unavailable, available }
 
 class NotificationSettingsIos {
   const NotificationSettingsIos({

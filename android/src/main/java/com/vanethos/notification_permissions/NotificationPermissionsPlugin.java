@@ -1,14 +1,19 @@
 package com.vanethos.notification_permissions;
 
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationChannelGroup;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
-import android.util.Log;
 
 import androidx.core.app.NotificationManagerCompat;
+
+import java.util.List;
+
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
@@ -25,6 +30,9 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
 
   private static final String PERMISSION_GRANTED = "granted";
   private static final String PERMISSION_DENIED = "denied";
+  private static final String CHANNEL_AVAILABLE = "available";
+  private static final String CHANNEL_UNAVAILABLE = "unavailable";
+  private static final String CHANNEL_NONE = "none";
 
   private final Context context;
 
@@ -54,6 +62,9 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
       } else {
         result.error(call.method, "context is not instance of Activity", null);
       }
+    } else if ("checkChannelsStatus".equalsIgnoreCase(call.method)) {
+      final List<String> channels = call.arguments();
+      result.success(checkChannelsStatus(channels));
     } else {
       result.notImplemented();
     }
@@ -95,5 +106,33 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
     intent.setData(uri);
 
     context.startActivity(intent);
+  }
+
+  private String checkChannelsStatus(List<String> channels) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      return (NotificationManagerCompat.from(context).areNotificationsEnabled())
+          ? CHANNEL_AVAILABLE
+          : CHANNEL_UNAVAILABLE;
+    }
+    NotificationManagerCompat nm = NotificationManagerCompat.from(context);
+    boolean notificationEnable = nm.areNotificationsEnabled();
+    boolean channelsCreated = false;
+    boolean channelsAvailable = false;
+    for (NotificationChannel ch : nm.getNotificationChannels()) {
+      if (!channels.isEmpty() && !channels.contains(ch.getId())) continue;
+      channelsCreated = true;
+      if (!notificationEnable) break;
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        String groupId = ch.getGroup();
+        if (groupId != null) {
+          NotificationChannelGroup group = nm.getNotificationChannelGroup(groupId);
+          if (group != null && group.isBlocked()) continue;
+        }
+      }
+      if (ch.getImportance() > NotificationManager.IMPORTANCE_NONE) channelsAvailable = true;
+    }
+    if (!channelsCreated) return CHANNEL_NONE;
+    if (channelsAvailable) return CHANNEL_AVAILABLE;
+    return CHANNEL_UNAVAILABLE;
   }
 }
