@@ -3,14 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
+import 'package:notification_permissions/channel_status.dart';
 
 class NotificationPermissions {
-  static const MethodChannel _channel =
-      const MethodChannel('notification_permissions');
+  static const MethodChannel _channel = const MethodChannel('notification_permissions');
 
   static Future<PermissionStatus> requestNotificationPermissions(
-      {NotificationSettingsIos iosSettings = const NotificationSettingsIos(),
-      bool openSettings = true}) async {
+      {NotificationSettingsIos iosSettings = const NotificationSettingsIos(), bool openSettings = true}) async {
     final map = iosSettings.toMap();
     map["openSettings"] = openSettings;
     String status = await _channel.invokeMethod('requestNotificationPermissions', map);
@@ -23,18 +22,15 @@ class NotificationPermissions {
   }
 
   static Future<PermissionStatus> getNotificationPermissionStatus() async {
-    final String status =
-        await _channel.invokeMethod('getNotificationPermissionStatus');
+    final String status = await _channel.invokeMethod('getNotificationPermissionStatus');
     return _getPermissionStatus(status);
   }
 
   /// Android only. if [channelIds] is null or empty, check all channels status.
-  /// Returns [ChannelStatus.available] if at least one of channels is available.
-  /// Returns [ChannelStatus.none] if channels has not been created.
-  static Future<ChannelStatus> checkChannelsStatus(List<String> channelIds) async {
-    if (Platform.isIOS) return ChannelStatus.available;
-    final String status = await _channel.invokeMethod('checkChannelsStatus', channelIds ?? []);
-    return _getChannelStatus(status);
+  static Future<AllChannelStatus> checkChannelsStatus({List<String> channelIds}) async {
+    if (Platform.isIOS) return AllChannelStatus();
+    final status = await _channel.invokeMethod('checkChannelsStatus', channelIds ?? []);
+    return AllChannelStatus.fromMap(status);
   }
 
   /// Gets the PermissionStatus from the channel Method
@@ -51,25 +47,9 @@ class NotificationPermissions {
         return PermissionStatus.unknown;
     }
   }
-
-  /// Gets the ChannelStatus from the channel Method
-  ///
-  /// Given a [String] status from the method channel, it returns a
-  /// [ChannelStatus]
-  static ChannelStatus _getChannelStatus(String status) {
-    switch (status) {
-      case "none":
-        return ChannelStatus.none;
-      case "unavailable":
-        return ChannelStatus.unavailable;
-      default:
-        return ChannelStatus.available;
-    }
-  }
 }
 
 enum PermissionStatus { granted, unknown, denied }
-enum ChannelStatus { none, unavailable, available }
 
 class NotificationSettingsIos {
   const NotificationSettingsIos({

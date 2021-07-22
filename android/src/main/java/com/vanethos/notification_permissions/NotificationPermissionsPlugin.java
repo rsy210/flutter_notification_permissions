@@ -12,7 +12,9 @@ import android.provider.Settings;
 
 import androidx.core.app.NotificationManagerCompat;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -32,7 +34,9 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
   private static final String PERMISSION_DENIED = "denied";
   private static final String CHANNEL_AVAILABLE = "available";
   private static final String CHANNEL_UNAVAILABLE = "unavailable";
-  private static final String CHANNEL_NONE = "none";
+  private static final String KEY_NEED_CHANNEL = "needChannel";
+  private static final String KEY_CHANNELS_CREATED = "channelsCreated";
+  private static final String KEY_STATUS = "status";
 
   private final Context context;
 
@@ -108,31 +112,40 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
     context.startActivity(intent);
   }
 
-  private String checkChannelsStatus(List<String> channels) {
+  private Map<String, Object> checkChannelsStatus(List<String> channels) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-      return (NotificationManagerCompat.from(context).areNotificationsEnabled())
-          ? CHANNEL_AVAILABLE
-          : CHANNEL_UNAVAILABLE;
+      Map<String, Object> map = new HashMap<String, Object>();
+      map.put(KEY_NEED_CHANNEL, false);
+      return map;
     }
     NotificationManagerCompat nm = NotificationManagerCompat.from(context);
     boolean notificationEnable = nm.areNotificationsEnabled();
     boolean channelsCreated = false;
-    boolean channelsAvailable = false;
+    Map<String, Object> channelsStatus = new HashMap<>();
     for (NotificationChannel ch : nm.getNotificationChannels()) {
       if (!channels.isEmpty() && !channels.contains(ch.getId())) continue;
       channelsCreated = true;
-      if (!notificationEnable) break;
+      if (!notificationEnable) {
+        channelsStatus.put(ch.getId(), CHANNEL_UNAVAILABLE);
+        break;
+      }
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         String groupId = ch.getGroup();
         if (groupId != null) {
           NotificationChannelGroup group = nm.getNotificationChannelGroup(groupId);
-          if (group != null && group.isBlocked()) continue;
+          if (group != null && group.isBlocked()) {
+            channelsStatus.put(ch.getId(), CHANNEL_UNAVAILABLE);
+            continue;
+          }
         }
       }
-      if (ch.getImportance() > NotificationManager.IMPORTANCE_NONE) channelsAvailable = true;
+      channelsStatus.put(ch.getId(), ch.getImportance() > NotificationManager.IMPORTANCE_NONE
+          ? CHANNEL_AVAILABLE : CHANNEL_UNAVAILABLE);
     }
-    if (!channelsCreated) return CHANNEL_NONE;
-    if (channelsAvailable) return CHANNEL_AVAILABLE;
-    return CHANNEL_UNAVAILABLE;
+    Map<String, Object> result = new HashMap<>();
+    result.put(KEY_NEED_CHANNEL, true);
+    result.put(KEY_CHANNELS_CREATED, channelsCreated);
+    result.put(KEY_STATUS, channelsStatus);
+    return result;
   }
 }
