@@ -11,10 +11,12 @@ class AllChannelStatus {
 
   factory AllChannelStatus.fromMap(Map<dynamic, dynamic> map) {
     return AllChannelStatus(
-      needChannel: map['needChannel'],
-      channelsCreated: map['channelsCreated'],
-      status: (map['status'] as Map<dynamic, dynamic>)
-          .map((key, value) => MapEntry(key.toString(), _getChannelStatus(value))),
+      needChannel: map['needChannel'] ?? false,
+      channelsCreated: map['channelsCreated'] ?? false,
+      status: map['status'] is Map<dynamic, dynamic>
+          ? (map['status'] as Map<dynamic, dynamic>)
+              .map((key, value) => MapEntry(key.toString(), _getChannelStatus(value)))
+          : {},
     );
   }
 
