@@ -122,25 +122,30 @@ public class NotificationPermissionsPlugin implements MethodChannel.MethodCallHa
     boolean notificationEnable = nm.areNotificationsEnabled();
     boolean channelsCreated = false;
     Map<String, Object> channelsStatus = new HashMap<>();
-    for (NotificationChannel ch : nm.getNotificationChannels()) {
-      if (!channels.isEmpty() && !channels.contains(ch.getId())) continue;
-      channelsCreated = true;
-      if (!notificationEnable) {
-        channelsStatus.put(ch.getId(), CHANNEL_UNAVAILABLE);
-        break;
-      }
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        String groupId = ch.getGroup();
-        if (groupId != null) {
-          NotificationChannelGroup group = nm.getNotificationChannelGroup(groupId);
-          if (group != null && group.isBlocked()) {
-            channelsStatus.put(ch.getId(), CHANNEL_UNAVAILABLE);
-            continue;
+    try {
+      for (NotificationChannel ch : nm.getNotificationChannels()) {
+        if (!channels.isEmpty() && !channels.contains(ch.getId())) continue;
+        channelsCreated = true;
+        if (!notificationEnable) {
+          channelsStatus.put(ch.getId(), CHANNEL_UNAVAILABLE);
+          break;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+          String groupId = ch.getGroup();
+          if (groupId != null) {
+            NotificationChannelGroup group = nm.getNotificationChannelGroup(groupId);
+            if (group != null && group.isBlocked()) {
+              channelsStatus.put(ch.getId(), CHANNEL_UNAVAILABLE);
+              continue;
+            }
           }
         }
+        channelsStatus.put(ch.getId(), ch.getImportance() > NotificationManager.IMPORTANCE_NONE
+                ? CHANNEL_AVAILABLE : CHANNEL_UNAVAILABLE);
       }
-      channelsStatus.put(ch.getId(), ch.getImportance() > NotificationManager.IMPORTANCE_NONE
-          ? CHANNEL_AVAILABLE : CHANNEL_UNAVAILABLE);
+    } catch (NullPointerException e) {
+      // catch for Attempt to invoke virtual method 'boolean android.app.NotificationChannel.isDeleted()' on a null object reference
+      e.printStackTrace();
     }
     Map<String, Object> result = new HashMap<>();
     result.put(KEY_NEED_CHANNEL, true);
